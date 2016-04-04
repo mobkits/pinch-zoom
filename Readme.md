@@ -18,6 +18,10 @@ Visit [Demo](https://chemzqm.github.io/pinch-zoom) with your phone.
 * Use 3d transform when possible and requestAnimationFrame to improve
   performance.
 
+## Installation
+
+    npm install pinch-zoom
+
 ## Example
 
 ``` css
