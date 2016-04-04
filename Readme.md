@@ -63,6 +63,11 @@ var pzoom = pinchZoom(el, {
 })
 ```
 
+## Events
+
+* `tap` emitted when double tap or scale level is 1.
+* `swipe` emitted whit direction `left` or `right` when fast swipe detected.
+
 ## API
 
 ### PinchZoom(el , [opt])
@@ -73,7 +78,7 @@ and `transition` style.
 * `opt.maxScale` maximun scale for element, default `5`.
 * `opt.draggable` make element draggable with one finger, default `false`.
 * `opt.threshold` threshold for fast swipe event in ms, default `200`
-* `opt.fastThreshold` limist moved distance for fast swipe in pixel, default `40`
+* `opt.fastThreshold` minimal moved distance for fast swipe in pixel, default `40`
 
 ### .animate(o, duration, [ease])
 
