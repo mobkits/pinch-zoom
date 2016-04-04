@@ -15,7 +15,7 @@ Visit [Demo](https://chemzqm.github.io/pinch-zoom) with your phone.
 * Restore to sane position when insane padding exists.
 * Emit `tap` and `swipe` event when reasonable.
 * No interrapt with `touchmove` event when not scaled and move left/right.
-* Use 3d transform when possible and requestAnimationFrame to imporve
+* Use 3d transform when possible and requestAnimationFrame to improve
   performance.
 
 ## Example
