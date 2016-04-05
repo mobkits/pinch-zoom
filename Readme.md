@@ -10,7 +10,7 @@ Visit [Demo](https://chemzqm.github.io/pinch-zoom) with your phone.
 * Pinch to zoom.
 * Scale back with animation when exceed maximun scale level ( default 5).
 * Drag element with animation and sceen edge limitation.
-* Tap to reset transform status with animation.
+* Support tap to reset transform status with animation.
 * Reset transform status when scale level below zero.
 * Restore to sane position when insane padding exists.
 * Emit `tap` and `swipe` event when reasonable.
@@ -58,7 +58,7 @@ Visit [Demo](https://chemzqm.github.io/pinch-zoom) with your phone.
 var pinchZoom = require('pinch-zoom')
 var el = document.querySelector('.wrapper')
 var pzoom = pinchZoom(el, {
-  draggable true,
+  draggable: true,
   maxScale: 4
 })
 ```
@@ -75,6 +75,7 @@ var pzoom = pinchZoom(el, {
 Init PinchZoom with element and optional opt, `el` should not have `transform`
 and `transition` style.
 
+* `opt.tapreset` reset transoform if scale is not `1` and not double tap.
 * `opt.maxScale` maximun scale for element, default `5`.
 * `opt.draggable` make element draggable with one finger, default `false`.
 * `opt.threshold` threshold for fast swipe event in ms, default `200`
