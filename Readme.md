@@ -7,7 +7,7 @@ Visit [Demo](https://chemzqm.github.io/pinch-zoom) with your phone.
 
 ## Features
 
-* Pinch to zoom.
+* Pinch to zoom, tested on ios > 9.2 and android 4.0
 * Scale back with animation when exceed maximun scale level ( default 5).
 * Drag element with animation and sceen edge limitation.
 * Support tap to reset transform status with animation.
@@ -17,6 +17,7 @@ Visit [Demo](https://chemzqm.github.io/pinch-zoom) with your phone.
 * No interrapt with `touchmove` event when not scaled and move left/right.
 * Use 3d transform when possible and requestAnimationFrame to improve
   performance.
+* Built with reusable & lightweight components, no sucks jquery.
 
 ## Installation
 
@@ -66,7 +67,11 @@ var pzoom = pinchZoom(el, {
 ## Events
 
 * `tap` emitted when double tap or scale level is 1.
-* `swipe` emitted whit direction `left` or `right` when fast swipe detected.
+* `swipe` emitted with direction `left` or `right` when fast swipe detected.
+* `scale` emitted with current transform properties (x, y , scale) after pinch
+  or reset.
+* `end` emitted on pinch end.
+* `start` emitted on pinch start.
 
 ## API
 
