@@ -47,6 +47,7 @@
 	var pinchZoom = __webpack_require__(1)
 	var el = document.querySelector('.wrapper')
 	var pzoom = pinchZoom(el, {
+	  tapreset: true,
 	  draggable: true,
 	  maxScale: 4
 	})
@@ -90,8 +91,9 @@
 	  // maximun duration in ms for fast swipe
 	  this.threshold = opt.threshold || 200
 	  // minimum moved distance for fast swipe
-	  this.fastThreshold = opt.fastThreshold || 40
+	  this.fastThreshold = opt.fastThreshold || 30
 	  var rect = el.getBoundingClientRect()
+	  this.tapreset = opt.tapreset
 	  this.sx = rect.left + rect.width/2
 	  this.sy = rect.top + rect.height/2
 	  // transform x y
@@ -127,7 +129,8 @@
 	 */
 	PinchZoom.prototype.ontouchstart = function (e) {
 	  var touches = e.touches
-	  if (!touches || 1 != touches.length || this.animating) return
+	  if (!touches || 1 != touches.length) return
+	  if (this.animating) this.tween.stop()
 	  this.speed = 0
 	  var d = Date.now()
 	  var t = e.touches[0]
@@ -198,15 +201,16 @@
 	PinchZoom.prototype.momentum = function () {
 	  var deceleration = 0.001
 	  var limit = this.getLimitation()
-	  var speed = Math.min(this.speed, 0.6)
-	  var dis = (speed * speed) / (2 * deceleration)
+	  var speed = Math.min(this.speed, 2)
+	  var rate = (4 - Math.PI)/2
+	  var dis = rate * (speed * speed) / (2 * deceleration)
 	  var tx = this.tx + dis*Math.cos(this.angle)
 	  var ty = this.ty + dis*Math.sin(this.angle)
 	  var res = util.limit(tx, ty, limit)
 	  var changed = this.scale > 1 && (tx < limit.minx || tx > limit.maxx)
-	  changed = ty < limit.miny || ty > limit.maxy ? true : changed
-	  var ease = changed ? 'out-back' : 'out-circ'
-	  var duration = changed ?  400: speed/deceleration
+	  //changed = ty < limit.miny || ty > limit.maxy ? true : changed
+	  var ease = changed ? 'out-back' : 'linear'
+	  var duration = changed ?  (100 + speed/deceleration): speed/deceleration
 	  return this.animate({x: res.x, y: res.y, scale: this.scale}, duration, ease)
 	}
 	
@@ -249,7 +253,11 @@
 	    return
 	  }
 	  this.lastTap = Date.now()
-	  this.reset()
+	  if (this.tapreset) {
+	    this.reset()
+	  } else {
+	    this.emit('tap')
+	  }
 	}
 	
 	/**
@@ -259,6 +267,7 @@
 	 * @returns {Promise}
 	 */
 	PinchZoom.prototype.reset = function () {
+	  this.emit('scale', {x: 0, y: 0, scale: 1})
 	  var promise = this.animate({x: 0, y: 0, scale: 1}, 200)
 	  return promise
 	}
@@ -269,11 +278,12 @@
 	 * @private
 	 */
 	PinchZoom.prototype.onPinchStart = function (point) {
-	  if (this.animating) return
+	  if (this.animating) this.tween.stop()
 	  this.start = point
 	  this.bx = this.sx + this.tx
 	  this.by = this.sy + this.ty
 	  this.startScale = this.scale
+	  this.emit('start')
 	}
 	
 	/**
@@ -302,6 +312,9 @@
 	 * @private
 	 */
 	PinchZoom.prototype.onPinchEnd = function () {
+	  if (this.scale !== this.startScale) {
+	    this.emit('scale', {x: this.tx, y: this.ty, scale: this.scale})
+	  }
 	  this.startScale = this.scale
 	  var p = this.checkScale()
 	  if (!p) this.checkPosition()
@@ -462,12 +475,12 @@
 	  var prev = this.prev || this.down
 	  var ts = Date.now()
 	  var dt = ts - prev.at
-	  if (ts - this.down.at < 100 || dt > 100) {
+	  if (ts - this.down.at < 50 || dt > 50) {
 	    var distance = util.distance([prev.x, prev.y, x, y])
 	    this.speed = Math.abs(distance / dt)
 	    this.angle = util.getAngle(prev.x, prev.y, x, y)
 	  }
-	  if (dt > 100) {
+	  if (dt > 50) {
 	    this.prev = {x: x, y: y, at: ts}
 	  }
 	}
