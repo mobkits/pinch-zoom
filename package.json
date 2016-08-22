@@ -1,6 +1,6 @@
 {
   "name": "pinch-zoom",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "pinch zoom element",
   "main": "lib/index.js",
   "directories": {
