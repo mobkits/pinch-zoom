@@ -45,6 +45,7 @@
     "mocha": "^2.3.3",
     "mocha-loader": "^0.7.1",
     "mocha-notify": "0.0.4",
+    "scrollfix": "0.0.2",
     "stack-source-map": "^1.0.4",
     "style-loader": "^0.13.0",
     "touch-simulate": "^0.1.1",
