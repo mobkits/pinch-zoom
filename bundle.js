@@ -45,6 +45,7 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var pinchZoom = __webpack_require__(1)
+	var log = document.getElementById('log')
 	var el = document.querySelector('.wrapper')
 	var pzoom = pinchZoom(el, {
 	  tapreset: true,
@@ -53,6 +54,9 @@
 	})
 	pzoom.on('swipe', function (dir) {
 	  console.log(dir)
+	})
+	pzoom.on('move', function (dx) {
+	  log.textContent = dx
 	})
 
 
@@ -84,6 +88,7 @@
 	  if (!(this instanceof PinchZoom)) return new PinchZoom(el, opt)
 	  opt = opt || {}
 	  this.el = el
+	  this.padding = opt.padding || 0
 	  this.container = el.parentNode
 	  this.container.style.overflow = 'hidden'
 	  this.scale = 1
@@ -93,7 +98,7 @@
 	  // minimum moved distance for fast swipe
 	  this.fastThreshold = opt.fastThreshold || 30
 	  var rect = el.getBoundingClientRect()
-	  this.tapreset = opt.tapreset
+	  this.tapreset = opt.tapreset || false
 	  this.sx = rect.left + rect.width/2
 	  this.sy = rect.top + rect.height/2
 	  // transform x y
@@ -131,6 +136,8 @@
 	  var touches = e.touches
 	  if (!touches || 1 != touches.length) return
 	  if (this.animating) this.tween.stop()
+	  var rect = this.el.getBoundingClientRect()
+	  this.translateY = rect.top < 0 || rect.bottom > this.container.clientHeight
 	  this.speed = 0
 	  var d = Date.now()
 	  var t = e.touches[0]
@@ -138,7 +145,7 @@
 	  var sy = t.clientY
 	  var self = this
 	  var start = {x: self.tx, y: self.ty}
-	  var limit = this.getLimitation()
+	  var limit = this.getLimitation(100)
 	  this.move = function (e, touch) {
 	    self.down = {
 	      x: sx,
@@ -147,14 +154,25 @@
 	    }
 	    var cx = touch.clientX
 	    var cy = touch.clientY
+	    var px = this.prev ? this.prev.x : sx
+	    var py = this.prev ? this.prev.y : sy
 	    e.preventDefault()
-	    var leftOrRight = Math.abs(cx - sx) > Math.abs(cy - sy)
-	    if (self.scale == 1 && leftOrRight) return
-	    e.stopPropagation()
+	    var leftOrRight = Math.abs(cx - px) > Math.abs(cy - py)
+	    if (self.scale != 1 && !leftOrRight) e.stopPropagation()
+	    if (this.draggable === false && self.scale == 1) {
+	      return this.emit('move', px - cx)
+	    }
 	    self.calcuteSpeed(cx, cy)
 	    var tx = start.x + cx - sx
 	    var ty = start.y + cy - sy
 	    var res = util.limit(tx, ty, limit)
+	    var dx = res.x - tx
+	    if (self.scale == 1 && leftOrRight) {
+	      res.y = this.ty
+	      this.angle = cx - px > 0 ? 0 : PI
+	    }
+	    this.emit('move', dx)
+	    if (!this.translateY) res.y = start.y
 	    self.setTransform(res.x, res.y, self.scale)
 	  }
 	}
@@ -187,10 +205,16 @@
 	  var t = Date.now()
 	  var touch = e.changedTouches[0]
 	  var x = touch.clientX
-	  if (Math.abs(x - this.down.x) > this.fastThreshold &&
+	  if ( Math.abs(x - this.down.x) > this.fastThreshold &&
 	      (t - this.down.at) < this.threshold ) {
 	    var dir = x > this.down.x ? 'right' : 'left'
-	    this.emit('swipe', dir)
+	    var limit = this.getLimitation()
+	    if (this.scale == 1 || this.tx <= limit.minx || this.tx >= limit.maxx) {
+	
+	      this.emit('swipe', dir)
+	    }
+	  } else {
+	    this.emit('end')
 	  }
 	  this.down = this.move = null
 	  if (this.animating || this.pinch.pinching) return
@@ -201,16 +225,18 @@
 	PinchZoom.prototype.momentum = function () {
 	  var deceleration = 0.001
 	  var limit = this.getLimitation()
-	  var speed = Math.min(this.speed, 2)
-	  var rate = (4 - Math.PI)/2
+	  var speed = Math.min(this.speed, 3)
+	  var rate = (4 - PI)/2
 	  var dis = rate * (speed * speed) / (2 * deceleration)
 	  var tx = this.tx + dis*Math.cos(this.angle)
 	  var ty = this.ty + dis*Math.sin(this.angle)
 	  var res = util.limit(tx, ty, limit)
-	  var changed = this.scale > 1 && (tx < limit.minx || tx > limit.maxx)
+	  var changed = this.scale > 1 && (tx < limit.minx || tx > limit.maxx
+	                || ty < limit.miny || ty > limit.maxy)
 	  //changed = ty < limit.miny || ty > limit.maxy ? true : changed
 	  var ease = changed ? 'out-back' : 'linear'
 	  var duration = changed ?  (100 + speed/deceleration): speed/deceleration
+	  if (!this.translateY) res.y = this.ty
 	  return this.animate({x: res.x, y: res.y, scale: this.scale}, duration, ease)
 	}
 	
@@ -219,18 +245,19 @@
 	 *
 	 * @private
 	 */
-	PinchZoom.prototype.getLimitation = function () {
+	PinchZoom.prototype.getLimitation = function (padY) {
+	  padY = padY || 0
 	  var viewport = util.viewport
 	  var vw = viewport.width
 	  var vh = viewport.height
 	  var rect = this.el.getBoundingClientRect()
 	  return {
-	    maxx: this.tx - rect.left,
-	    minx: this.tx - (rect.left + rect.width - vw),
+	    maxx: this.tx - rect.left + this.padding,
+	    minx: this.tx - (rect.left + rect.width - vw) - this.padding,
 	    miny: vh > rect.height ? this.ty - rect.top
-	            : this.ty - rect.top - (rect.height - vh),
+	            : this.ty - rect.top - (rect.height - vh) - padY,
 	    maxy: vh > rect.height ? this.ty + (vh - rect.top - rect.height)
-	            : this.ty  - rect.top
+	            : this.ty  - rect.top + padY
 	    }
 	}
 	
@@ -1827,7 +1854,7 @@
 	 * @api private
 	 */
 	
-	var distance = exports.distance = function (arr) {
+	exports.distance = function (arr) {
 	  var x = Math.pow(arr[0] - arr[2], 2);
 	  var y = Math.pow(arr[1] - arr[3], 2);
 	  return Math.sqrt(x + y);
@@ -1950,11 +1977,12 @@
 	  var touches = e.touches
 	  if (!touches || 2 != touches.length) return this
 	  e.preventDefault()
+	  e.stopPropagation()
 	
 	  var coords = []
 	  for(var i = 0, finger; i < touches.length; i++) {
 	    finger = touches[i]
-	    coords.push(finger.pageX, finger.pageY)
+	    coords.push(finger.clientX, finger.clientY)
 	  }
 	
 	  this.pinching = true
@@ -1975,14 +2003,13 @@
 	Pinch.prototype.ontouchmove = function(e) {
 	  var touches = e.touches
 	  if (!touches || touches.length != 2 || !this.pinching) return this
-	
+	  e.preventDefault()
+	  e.stopPropagation()
 	  var coords = []
 	  for(var i = 0, finger; i < touches.length ; i++) {
 	    finger = touches[i]
-	    coords.push(finger.pageX, finger.pageY)
+	    coords.push(finger.clientX, finger.clientY)
 	  }
-	
-	  var changed = e.changedTouches
 	
 	  var dist = util.distance(coords)
 	  var mid = util.midpoint(coords)
