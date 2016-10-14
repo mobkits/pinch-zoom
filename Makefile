@@ -15,6 +15,7 @@ test-coveralls:
 		cat ./coverage/lcov/lcov.info | ./node_modules/coveralls/bin/coveralls.js
 
 doc:
+	@webpack
 	@ghp-import example -n -p
 
 .PHONY: test
