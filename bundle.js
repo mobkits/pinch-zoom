@@ -159,7 +159,7 @@
 	    e.preventDefault()
 	    var leftOrRight = Math.abs(cx - px) > Math.abs(cy - py)
 	    if (self.scale != 1 && !leftOrRight) e.stopPropagation()
-	    if (this.draggable === false && self.scale == 1) {
+	    if (this.draggable === false && self.scale == 1 && leftOrRight) {
 	      return this.emit('move', px - cx)
 	    }
 	    self.calcuteSpeed(cx, cy)
@@ -171,7 +171,7 @@
 	      res.y = this.ty
 	      this.angle = cx - px > 0 ? 0 : PI
 	    }
-	    this.emit('move', dx)
+	    if (leftOrRight) this.emit('move', dx)
 	    if (!this.translateY) res.y = start.y
 	    self.setTransform(res.x, res.y, self.scale)
 	  }
@@ -205,7 +205,9 @@
 	  var t = Date.now()
 	  var touch = e.changedTouches[0]
 	  var x = touch.clientX
-	  if ( Math.abs(x - this.down.x) > this.fastThreshold &&
+	  var y = touch.clientY
+	  var dx = Math.abs(x - this.down.x) 
+	  if ( dx > this.fastThreshold && dx > Math.abs(y - this.down.y) &&
 	      (t - this.down.at) < this.threshold ) {
 	    var dir = x > this.down.x ? 'right' : 'left'
 	    var limit = this.getLimitation()
@@ -217,15 +219,15 @@
 	    this.emit('end')
 	  }
 	  this.down = this.move = null
-	  if (this.animating || this.pinch.pinching) return
-	  e.stopPropagation()
-	  if (this.speed) this.momentum()
+	  if (this.pinch.pinching) return
+	  if (this.tween) this.tween.stop()
+	  this.momentum()
 	}
 	
 	PinchZoom.prototype.momentum = function () {
 	  var deceleration = 0.001
 	  var limit = this.getLimitation()
-	  var speed = Math.min(this.speed, 3)
+	  var speed = Math.min(this.speed, 2)
 	  var rate = (4 - PI)/2
 	  var dis = rate * (speed * speed) / (2 * deceleration)
 	  var tx = this.tx + dis*Math.cos(this.angle)
@@ -234,8 +236,12 @@
 	  var changed = this.scale > 1 && (tx < limit.minx || tx > limit.maxx
 	                || ty < limit.miny || ty > limit.maxy)
 	  //changed = ty < limit.miny || ty > limit.maxy ? true : changed
-	  var ease = changed ? 'out-back' : 'linear'
-	  var duration = changed ?  (100 + speed/deceleration): speed/deceleration
+	  var ease = changed ? 'out-back' : 'out-circ'
+	  var duration = speed/deceleration
+	  if (this.ty < limit.miny || this.ty > limit.maxy) {
+	    duration = 500
+	    ease = 'out-circ'
+	  }
 	  if (!this.translateY) res.y = this.ty
 	  return this.animate({x: res.x, y: res.y, scale: this.scale}, duration, ease)
 	}
@@ -251,9 +257,10 @@
 	  var vw = viewport.width
 	  var vh = viewport.height
 	  var rect = this.el.getBoundingClientRect()
+	  var prect = this.el.parentNode.getBoundingClientRect()
 	  return {
-	    maxx: this.tx - rect.left + this.padding,
-	    minx: this.tx - (rect.left + rect.width - vw) - this.padding,
+	    maxx: this.tx - rect.left + prect.left + this.padding,
+	    minx: this.tx - (rect.left - prect.left + rect.width - vw) - this.padding,
 	    miny: vh > rect.height ? this.ty - rect.top
 	            : this.ty - rect.top - (rect.height - vh) - padY,
 	    maxy: vh > rect.height ? this.ty + (vh - rect.top - rect.height)
