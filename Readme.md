@@ -2,8 +2,9 @@
 
 Pinch an image or div for zoom.
 
-Visit [Demo](https://chemzqm.github.io/pinch-zoom) with your phone.
+Visit [Demo](https://mobkits.github.io/pinch-zoom/) with your phone.
 
+![](http://7b1fwt.com1.z0.glb.clouddn.com/1497607179.png)
 
 ## Features
 
